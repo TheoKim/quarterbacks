@@ -276,7 +276,7 @@ scaled_features = scaler.fit_transform(x_Adj_n_Yds_p_att.values.reshape(-1, 1)) 
 error = list() # to save sse
 silhouette = list() # silhouette score
 
-#%% 5.1) Elbow method
+#%% 5.1) Elbow + silhouette methods
 
 for k in range(2,20): # silhouette requires at least 2 clusters
     kmeans = KMeans(n_clusters=k, n_init=10) # init k-means object
@@ -297,48 +297,20 @@ plt.ylabel('Squared Standard Error')
 plt.show()
 
 
-#%% 5.3) k-means classification graph
+# Plotting the Silhouette Score
+plt.figure(figsize=(12, 6))
+plt.plot(range(2, len(silhouette)+2), silhouette, color='blue', linestyle='dashed', marker='o',
+         markerfacecolor='yellow', markersize=10)
 
-kmeansPasser = KMeans(
-    init="random",
-    n_clusters=3,
-    n_init=10,
-    max_iter=300,
-    random_state=84
-)
-
-kmeansPasser.fit(scaled_features)
-cluster_labels = kmeansPasser.labels_
-
-# Create a new DataFrame with the cluster labels
-new_df = pd.DataFrame({
-    'Adjusted_net_yards_per_attempt': qb_data['Adjusted_net_yards_per_attempt'],
-    'Win_Percentage': qb_data['Win_Percentage'],
-    'cluster': cluster_labels
-})
-
-# Calculate the median Adjusted Net Yards Per Attempt and Win Percentage for each cluster
-cluster3_df = new_df.groupby('cluster')[['Adjusted_net_yards_per_attempt', 'Win_Percentage']].median().reset_index()
-
-cluster_colors = {0: 'red', 1: 'orange', 2: 'green'}
-
-plt.rc('figure', figsize=(10, 6))
-
-median_win_percentage = new_df.groupby('cluster')['Win_Percentage'].median()
-
-for i in range(3):
-    subset = new_df[new_df['cluster'] == i]
-    label = f'Cluster {i + 1}'
-    plt.scatter(subset['Adjusted_net_yards_per_attempt'], subset['Win_Percentage'], label=label, color=cluster_colors[i])
-
-plt.xlabel('ANY/A')
-plt.ylabel('Win Percentage')
-plt.title('Win Percentage and ANY/A by Cluster')
-plt.legend(loc='upper left', prop={'size': 8})
+plt.xticks(np.arange(0, 21, 1))
+plt.title('K-Means: Silhouette Score vs K Value')
+plt.xlabel('K Value')
+plt.ylabel('Silhouette Score')
 plt.show()
 
 
-#%% 5.4 k-means k = 4
+#%% 5.3) k-means classification graph
+
 
 kmeansPasser4 = KMeans(
     init="random",
@@ -373,22 +345,65 @@ for i in range(4):
     plt.scatter(subset['Adjusted_net_yards_per_attempt'], subset['Win_Percentage'], label=label, color=cluster_colors4[i])
 
 plt.xlabel('ANY/A')
-plt.ylabel('Win Percentage')
+plt.ylabel('Win percentage')
 plt.title('Win Percentage and ANY/A by Cluster')
 plt.legend(loc='upper left', prop={'size': 8})
 plt.show()
 
-#%% 5.5 Changing cluster DFs
+#%% 5.4 k-means k=5
 
-cluster3_df = cluster3_df.rename(columns={
-    'cluster': 'Cluster',
-    'Adjusted_net_yards_per_attempt': 'ANY/A',
-    'Win_Percentage': 'Win Percentage'
+# Perform k-means clustering
+kmeansPasser5 = KMeans(
+    init="random",
+    n_clusters=5,
+    n_init=10,
+    max_iter=300,
+    random_state=67
+)
+kmeansPasser5.fit(scaled_features)
+cluster_labels5 = kmeansPasser5.labels_
+
+# Create a new DataFrame with the cluster labels
+new_df5 = pd.DataFrame({
+    'Adjusted_net_yards_per_attempt': qb_data['Adjusted_net_yards_per_attempt'],
+    'Win_Percentage': qb_data['Win_Percentage'],
+    'cluster': cluster_labels5
 })
-cluster3_df.iloc[0, 0] = 1
-cluster3_df.iloc[1, 0] = 2
-cluster3_df.iloc[2, 0] = 3
 
+# Calculate the median Adjusted Net Yards Per Attempt and Win Percentage for each cluster
+cluster5_df = new_df5.groupby('cluster')[['Adjusted_net_yards_per_attempt', 'Win_Percentage']].median().reset_index()
+
+# Sort the clusters by a chosen criterion (e.g., median Adjusted Net Yards Per Attempt)
+cluster5_df = cluster5_df.sort_values(by='Adjusted_net_yards_per_attempt', ascending=True).reset_index()
+
+# Reassign the cluster labels based on the sorted order
+cluster_order = cluster5_df['cluster'].tolist()
+cluster_mapping = {old_label: new_label for new_label, old_label in enumerate(cluster_order)}
+
+# Map the clusters to the desired colors
+cluster_colors5 = {0: 'red', 1: 'orange', 2: 'gold', 3: 'green', 4: 'lime'}
+
+# Apply the new labels to the data
+new_df5['cluster'] = new_df5['cluster'].map(cluster_mapping)
+
+# Plot settings
+plt.rc('figure', figsize=(10, 6))
+
+# Plotting the clusters with locked-in colors
+for i in range(5):
+    subset = new_df5[new_df5['cluster'] == i]
+    label = f'Cluster {i + 1}'
+    plt.scatter(subset['Adjusted_net_yards_per_attempt'], subset['Win_Percentage'], label=label, color=cluster_colors5[i])
+
+plt.xlabel('ANY/A')
+plt.ylabel('Win Percentage')
+plt.title('Win Percentage and ANY/A by Cluster')
+plt.legend(loc='best', title='Clusters')
+plt.show()
+
+
+
+#%% 5.5 Changing cluster DFs
 
 cluster4_df = cluster4_df.rename(columns={
     'cluster': 'Cluster',
@@ -400,6 +415,21 @@ cluster4_df.iloc[0, 0] = 1
 cluster4_df.iloc[1, 0] = 2
 cluster4_df.iloc[2, 0] = 3
 cluster4_df.iloc[3, 0] = 4
+
+cluster5_df = cluster5_df.rename(columns={
+    'cluster': 'Cluster',
+    'Adjusted_net_yards_per_attempt': 'ANY/A',
+    'Win_Percentage': 'Win Percentage'
+})
+
+cluster5_df.iloc[0, 0] = 1
+cluster5_df.iloc[1, 0] = 2
+cluster5_df.iloc[2, 0] = 3
+cluster5_df.iloc[3, 0] = 4
+cluster5_df.iloc[4, 0] = 5
+
+cluster5_df = cluster5_df.drop(columns=['Cluster'])
+cluster5_df = cluster5_df.rename(columns={'index': 'Cluster'})
 
 
 #%% 6) KNN
@@ -435,7 +465,7 @@ for i, rank in enumerate(label_encoder.classes_):
     plt.scatter(kNNxPasser[idx], kNNyPasser[idx], color=colors[i], label=custom_rank_names[i])
 
 plt.xlabel('ANY/A')
-plt.ylabel('Win percentage')
+plt.ylabel('Win Percentage')
 plt.title('Win Percentage and ANY/A by Cluster')
 plt.legend(title='Rank')
 plt.show()
@@ -451,7 +481,7 @@ medianValues = medianValues.rename(columns={
     'Win_Percentage': 'Win Percentage'
 })
 
-#%% Counting ranks in each cluster
+#%% 6.1 Counting ranks in each cluster
 
 new_df4 = pd.DataFrame({
     'Adjusted_net_yards_per_attempt': qb_data['Adjusted_net_yards_per_attempt'],
@@ -485,10 +515,55 @@ rank_clusters.at[3, 'K-means cluster'] = "Great"
 
 print(rank_clusters)
 
-#%%
+#%% 6.2 Ranks in each cluster
+
+new_df5 = pd.DataFrame({
+    'Adjusted_net_yards_per_attempt': qb_data['Adjusted_net_yards_per_attempt'],
+    'Win_Percentage': qb_data['Win_Percentage'],
+    'Rank': qb_data['Rank'],
+    'cluster': cluster_labels5  # Assuming you have 5 cluster labels stored in cluster_labels5
+})
+
+# Store the counts of each rank in each cluster
+rank_clusters = pd.DataFrame(columns=['No honors', 'Pro Bowl', 'All-Pro'], index=range(5)).fillna(0).astype(int)
+
+for cluster in range(5):
+    cluster_data = new_df5[new_df5['cluster'] == cluster]
+    rank_counts = cluster_data['Rank'].value_counts().sort_index()
+    for rank in rank_counts.index:
+        if rank == 0:
+            rank_clusters.at[cluster, 'No honors'] = rank_counts[rank]
+        elif rank == 1:
+            rank_clusters.at[cluster, 'Pro Bowl'] = rank_counts[rank]
+        elif rank == 2:
+            rank_clusters.at[cluster, 'All-Pro'] = rank_counts[rank]
+
+rank_columns = ['K-means cluster'] + [col for col in rank_clusters.columns if col != 'K-means cluster']
+rank_clusters = rank_clusters.reindex(columns=rank_columns)
+
+rank_clusters.at[0, 'K-means cluster'] = 'Good'
+rank_clusters.at[1, 'K-means cluster'] = 'Terrible'
+rank_clusters.at[2, 'K-means cluster'] = 'Great'
+rank_clusters.at[3, 'K-means cluster'] = 'Average'
+rank_clusters.at[4, 'K-means cluster'] = 'Bad'
+
+# Create a custom sorting order
+custom_order = ['Terrible', 'Bad', 'Average', 'Good', 'Great']
+
+# Sort the DataFrame based on the custom order
+rank_clusters['K-means cluster'] = pd.Categorical(rank_clusters['K-means cluster'], categories=custom_order, ordered=True)
+rank_clusters = rank_clusters.sort_values('K-means cluster')
+
+# Display the sorted DataFrame
+rank_clusters['Total'] = rank_clusters[['No honors', 'Pro Bowl', 'All-Pro']].sum(axis=1)
+
+# Display the updated DataFrame
+print(rank_clusters)
+
+#%% 6.3 kNN accuracy 
 
 # List of k values to try
-k_values = [3, 5, 7, 9, 11, 13, 15]
+k_values = [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33]
 accuracies = []
 
 for k in k_values:
@@ -500,11 +575,16 @@ for k in k_values:
 
 # Plot the accuracies
 plt.figure(figsize=(10, 6))
-plt.bar(k_values, accuracies, color='skyblue')
+bars = plt.bar(k_values, accuracies, color='skyblue')
+
+# Add accuracy labels on top of each bar
+for bar, accuracy in zip(bars, accuracies):
+    yval = bar.get_height()
+    plt.text(bar.get_x() + bar.get_width() / 2, yval, f'{accuracy:.2f}', ha='center', va='bottom')
+
 plt.xlabel('k Value')
 plt.ylabel('Accuracy')
 plt.title('Accuracy for Different k Values in k-NN')
 plt.xticks(k_values)
+plt.ylim(0, 1)  # Set y-axis limits for better label placement
 plt.show()
-
-
